@@ -3,11 +3,14 @@ module Main where
 import           Text.Parsec
 import           Text.Parsec.String
 import           Data.Functor
+import           Data.Maybe
+import           Data.Fixed
 import           Control.Applicative     hiding ( many
                                                 , (<|>)
                                                 )
 import           Numeric
 import           Data.Char
+import           Data.Time
 import           Combinators                    ( stringLiteral
                                                 , lexeme
                                                 , skipWs
@@ -19,31 +22,31 @@ data FREDValue =
     | A [FREDValue]
     | O [(String, FREDValue)]
     | N (Either Integer Float)
-    | D (Integer, Integer, Integer)
-    | T (String, [(String, FREDValue)], FREDValue)
+    | Date Day
+    | Time TimeOfDay
+    | Tag (String, [(String, FREDValue)], FREDValue)
     | NULL
     deriving Show
 
 value :: Parser FREDValue
-value = try tagged <|> atom
+value = tagged <|> atom
 
 atom :: Parser FREDValue
 atom =
-    try array
-        <|> try object
-        <|> try date
-        <|> try number
-        <|> try fredString
-        <|> try bool
-        <|> try Main.null
-        <*  spaces
-
+    object
+        <|> array
+        <|> date
+        <|> time
+        <|> number
+        <|> fredString
+        <|> bool
+        <|> Main.null
 
 tagged :: Parser FREDValue
 tagged = tag <|> voidTag
 
 tag :: Parser FREDValue
-tag = lexeme (T <$> tag')
+tag = lexeme (Tag <$> try tag')
   where
     tag' = do
         tagValue  <- name
@@ -52,7 +55,7 @@ tag = lexeme (T <$> tag')
         return (tagValue, metaValue, value)
 
 voidTag :: Parser FREDValue
-voidTag = lexeme (T <$> voidTag')
+voidTag = lexeme (Tag <$> voidTag')
   where
     voidTag' = do
         char '('
@@ -82,10 +85,10 @@ voidMeta = do
     return (value, NULL)
 
 boolTrue :: Parser Bool
-boolTrue = string "true" *> pure True
+boolTrue = try (string "true") $> True
 
 boolFalse :: Parser Bool
-boolFalse = string "false" *> pure False
+boolFalse = try (string "false") $> False
 
 bool :: Parser FREDValue
 bool = lexeme (B <$> (boolTrue <|> boolFalse))
@@ -94,16 +97,36 @@ null :: Parser FREDValue
 null = lexeme (string "null" *> pure NULL)
 
 date :: Parser FREDValue
-date = lexeme (D <$> date)
+date = lexeme (Date <$> date)
   where
-    date :: Parser (Integer, Integer, Integer)
+    date :: Parser Day
     date = do
-        year <- read <$> count 4 digit
+        year <- read <$> (try (count 4 digit))
         char '-'
         month <- read <$> count 2 digit
         char '-'
         day <- read <$> count 2 digit
-        return (year, month, day)
+        let date = fromGregorianValid year month day
+        fromMaybeP "date" date
+
+time :: Parser FREDValue
+time = lexeme (Time <$> try time)
+  where
+    time :: Parser TimeOfDay
+    time = do
+        hour <- read <$> count 2 digit
+        char ':'
+        minutes <- read <$> count 2 digit
+        char ':'
+        seconds <- count 2 digit
+        frac    <- option [] frac
+        let time = makeTimeOfDayValid hour minutes (read $ seconds ++ frac)
+        fromMaybeP "time" time
+
+fromMaybeP :: String -> Maybe a -> Parser a
+fromMaybeP msg maybe = case maybe of
+    Nothing -> unexpected msg
+    Just a  -> pure a
 
 fredString :: Parser FREDValue
 fredString = lexeme (S <$> stringLiteral)
@@ -111,6 +134,7 @@ fredString = lexeme (S <$> stringLiteral)
 number :: Parser FREDValue
 number =
     lexeme (N <$> (toNumber <$> int <*> (option [] frac) <*> (option [] expo)))
+
 
 toNumber :: [Char] -> [Char] -> [Char] -> Either Integer Float
 toNumber int []   []                 = Left (read int)
@@ -153,13 +177,15 @@ sign :: Parser [Char]
 sign = string "" <|> string "-" <|> string "+"
 
 array :: Parser FREDValue
-array = A <$> (lexeme (char '[') *> many atom <* (char ']'))
+array =
+    lexeme $ A <$> ((lexeme (char '[')) *> many atom <* (lexeme (char ']')))
 
 object :: Parser FREDValue
-object = O <$> (lexeme (char '{') *> many pair <* char '}')
+object = lexeme (O <$> ((char '{') *> many pair <* char '}'))
 
 pair :: Parser (String, FREDValue)
 pair = do
+    skipWs
     key <- name <|> quotedName
     skipWs
     char ':'
