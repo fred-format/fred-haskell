@@ -2,6 +2,7 @@ module Combinators
     ( stringLiteral
     , lexeme
     , skipWs
+    , ws
     )
 where
 
