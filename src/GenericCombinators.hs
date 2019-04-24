@@ -1,4 +1,4 @@
-module Combinators
+module GenericCombinators
     ( stringLiteral
     , lexeme
     , skipWs

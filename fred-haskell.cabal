@@ -20,4 +20,7 @@ executable fred-haskell
   build-depends:       base >= 4.7 && < 5
                     ,  parsec 
                     ,  time
-  other-modules:       Combinators
+  other-modules:       GenericCombinators
+                    ,  FREDValue
+                    ,  Number
+                    ,  DateTime
