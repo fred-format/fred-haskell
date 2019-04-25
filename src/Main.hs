@@ -32,10 +32,12 @@ atom =
         <|> array
         <|> dateOrDateTime
         <|> localTime
+        <|> symbol
         <|> number
         <|> fredString
         <|> bool
         <|> Main.null
+
 
 tagged :: Parser FREDValue
 tagged = tag <|> voidTag
@@ -112,10 +114,17 @@ pair = do
     return (key, value)
 
 name :: Parser String
-name = lexeme (many1 (oneOf (['a' .. 'z'] ++ ['A' .. 'Z'] ++ ['0' .. '9'])))
+name = lexeme
+    (   (:)
+    <$> (oneOf (['a' .. 'z'] ++ ['A' .. 'Z']))
+    <*> (many1 (oneOf (['a' .. 'z'] ++ ['A' .. 'Z'] ++ ['0' .. '9'])))
+    )
 
 quotedName :: Parser String
 quotedName = lexeme stringLiteral
+
+symbol :: Parser FREDValue
+symbol = Symbol <$> lexeme (char '`' *> name)
 
 main :: IO ()
 main = do

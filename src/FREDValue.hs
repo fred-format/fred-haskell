@@ -11,6 +11,7 @@ data FREDValue =
     | A [FREDValue]
     | O [(String, FREDValue)]
     | N (Either Integer Float)
+    | Symbol String
     | LDate Day
     | LTime TimeOfDay
     | LDateTime LocalTime -- LocalTime Day TimeOfDay
