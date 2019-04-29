@@ -6,13 +6,52 @@ where
 
 import           Text.Parsec
 import           Text.Parsec.String
+import           Numeric
 import           GenericCombinators
 import           FREDValue
+import           Data.Char                      ( digitToInt )
+import           Data.List                      ( foldl' )
 
 number :: Parser FREDValue
 number =
-    lexeme (N <$> (toNumber <$> int <*> (option [] frac) <*> (option [] expo)))
+    (N <$> try hex)
+        <|> (N <$> try oct)
+        <|> (N <$> try binary)
+        <|> (N <$> decimal)
 
+
+hex :: Parser (Either Integer Float)
+hex = do
+    string "0x"
+    firstHexDigit <- hexDigit
+    hexDigits     <- many (hexDigit <|> (char '_' *> hexDigit))
+    let [(hex, _)] = readHex (firstHexDigit : hexDigits)
+    return (Left hex)
+
+oct :: Parser (Either Integer Float)
+oct = do
+    string "0o"
+    firstOctDigit <- octDigit
+    octDigits     <- many (octDigit <|> (char '_' *> octDigit))
+    let [(oct, _)] = readOct (firstOctDigit : octDigits)
+    return (Left oct)
+
+binary :: Parser (Either Integer Float)
+binary = do
+    string "0b"
+    firstBinDigit <- binDigit
+    binDigits     <- many (binDigit <|> (char '_' *> binDigit))
+    let bin = toDec (firstBinDigit : binDigits)
+    return (Left bin)
+
+binDigit :: Parser Char
+binDigit = char '0' <|> char '1'
+
+toDec :: String -> Integer
+toDec = foldl' (\acc x -> acc * 2 + toInteger (digitToInt x)) 0
+
+decimal :: Parser (Either Integer Float)
+decimal = (toNumber <$> int <*> (option [] frac) <*> (option [] expo))
 
 toNumber :: [Char] -> [Char] -> [Char] -> Either Integer Float
 toNumber int []   []                 = Left (read int)

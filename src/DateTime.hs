@@ -6,7 +6,7 @@ where
 
 import           FREDValue
 import           GenericCombinators
-import           Number(frac)
+import           Number                         ( frac )
 import           Text.Parsec
 import           Text.Parsec.String
 import           Data.Time
@@ -14,10 +14,10 @@ import           Data.Functor
 
 
 localTime :: Parser FREDValue
-localTime = lexeme (LTime <$> try time)
+localTime = (LTime <$> try time)
 
 localTimeOrZonedTime :: Parser (TimeOfDay, Maybe TimeZone)
-localTimeOrZonedTime = (,) <$> time <*> restTime
+localTimeOrZonedTime = (,) <$> time <*> option Nothing restTime
 
 time :: Parser TimeOfDay
 time = do
@@ -31,12 +31,11 @@ time = do
     fromMaybeP "time" time
 
 restTime :: Parser (Maybe TimeZone)
-restTime =
-    (char 'Z' *> pure (Just utc)) <|> timeOffSet <|> (ws *> pure Nothing)
+restTime = char 'Z' $> Just utc <|> timeOffSet
 
 timeOffSet :: Parser (Maybe TimeZone)
 timeOffSet = do
-    sign <- (char '+' <|> char '-')
+    sign <- char '+' <|> char '-'
     hour <- count 2 digit
     string ":"
     minutes <- count 2 digit
@@ -52,11 +51,11 @@ convertToTimeZone '-' hour minutes =
 
 dateOrDateTime :: Parser FREDValue
 dateOrDateTime = do
-    date <- date
-    returnDateOrDateTime date <$> rest
+    date <- try date
+    returnDateOrDateTime date <$> option Nothing rest
   where
     rest :: Parser (Maybe (TimeOfDay, Maybe TimeZone))
-    rest = (Just <$> followingTime) <|> (ws $> Nothing)
+    rest = Just <$> (followingTime)
 
     returnDateOrDateTime
         :: Day -> Maybe (TimeOfDay, Maybe TimeZone) -> FREDValue
@@ -68,7 +67,7 @@ dateOrDateTime = do
 
 date :: Parser Day
 date = do
-    year <- read <$> (try (count 4 digit))
+    year <- read <$> ((count 4 digit))
     char '-'
     month <- read <$> count 2 digit
     char '-'

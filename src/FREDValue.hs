@@ -4,6 +4,7 @@ module FREDValue
 where
 
 import           Data.Time
+import qualified Data.ByteString as B
 
 data FREDValue =
     B Bool
@@ -12,6 +13,7 @@ data FREDValue =
     | O [(String, FREDValue)]
     | N (Either Integer Float)
     | Symbol String
+    | Blob B.ByteString
     | LDate Day
     | LTime TimeOfDay
     | LDateTime LocalTime -- LocalTime Day TimeOfDay

@@ -5,6 +5,8 @@ import           Text.Parsec.String
 import           Data.Functor
 import           Data.Maybe
 import           Data.Fixed
+import qualified Data.ByteString.Char8         as BC
+
 import           Data.Char
 import           Control.Applicative     hiding ( many
                                                 , (<|>)
@@ -18,10 +20,16 @@ import           Number                         ( number
                                                 , frac
                                                 )
 import           GenericCombinators             ( stringLiteral
+                                                , variable
+                                                , quotedVariable
                                                 , lexeme
-                                                , skipWs
                                                 , ws
                                                 )
+document :: Parser FREDValue
+document = (A <$> stream) <|> value
+    where
+        stream :: Parser [FREDValue]
+        stream = string "---" *> ws  *> value `endBy` ( ws *> string "---" <* ws)
 
 value :: Parser FREDValue
 value = tagged <|> atom
@@ -34,6 +42,7 @@ atom =
         <|> localTime
         <|> symbol
         <|> number
+        <|> blob
         <|> fredString
         <|> bool
         <|> Main.null
@@ -43,36 +52,43 @@ tagged :: Parser FREDValue
 tagged = tag <|> voidTag
 
 tag :: Parser FREDValue
-tag = lexeme (Tag <$> try tag')
+tag = Tag <$> try tag'
   where
     tag' = do
-        tagValue  <- name
+        tagValue <- name
+        ws
         metaValue <- option [] meta
-        value     <- atom
+        ws
+        value <- atom
         return (tagValue, metaValue, value)
 
 voidTag :: Parser FREDValue
-voidTag = lexeme (Tag <$> voidTag')
+voidTag = Tag <$> voidTag'
   where
     voidTag' = do
         char '('
-        tagValue  <- name
-        metaValue <- many metaItem
+        ws
+        tagValue <- name
+        ws
+        metaValue <- manyMetaItem
         char ')'
         return (tagValue, metaValue, NULL)
 
 meta :: Parser [(String, FREDValue)]
-meta = char '(' *> many metaItem <* char ')'
+meta = char '(' *> ws *> manyMetaItem <* char ')'
+
+manyMetaItem :: Parser [(String, FREDValue)]
+manyMetaItem = metaItem `sepEndBy` many1 (oneOf " \t\n,")
 
 metaItem :: Parser (String, FREDValue)
-metaItem = lexeme (try meta' <|> voidMeta)
+metaItem = try meta' <|> voidMeta
 
 meta' :: Parser (String, FREDValue)
 meta' = do
     key <- name
-    skipWs
+    ws
     char '='
-    skipWs
+    ws
     value <- atom
     return (key, value)
 
@@ -88,47 +104,43 @@ boolFalse :: Parser Bool
 boolFalse = try (string "false") $> False
 
 bool :: Parser FREDValue
-bool = lexeme (B <$> (boolTrue <|> boolFalse))
+bool = B <$> (boolTrue <|> boolFalse)
 
 null :: Parser FREDValue
-null = lexeme (string "null" *> pure NULL)
+null = string "null" $> NULL
 
 fredString :: Parser FREDValue
-fredString = lexeme (S <$> stringLiteral)
+fredString = S <$> stringLiteral
 
 array :: Parser FREDValue
 array =
-    lexeme $ A <$> ((lexeme (char '[')) *> many atom <* (lexeme (char ']')))
+    A <$> (char '[' *> ws *> atom `sepEndBy` many1 (oneOf " \t\n,") <* char ']')
 
 object :: Parser FREDValue
-object = lexeme (O <$> ((char '{') *> many pair <* char '}'))
+object =
+    O <$> (char '{' *> ws *> pair `sepEndBy` many1 (oneOf " \t\n,") <* char '}')
 
 pair :: Parser (String, FREDValue)
 pair = do
-    skipWs
-    key <- name <|> quotedName
-    skipWs
+    key <- name
+    ws
     char ':'
-    skipWs
+    ws
     value <- value
     return (key, value)
 
 name :: Parser String
-name = lexeme
-    (   (:)
-    <$> (oneOf (['a' .. 'z'] ++ ['A' .. 'Z']))
-    <*> (many1 (oneOf (['a' .. 'z'] ++ ['A' .. 'Z'] ++ ['0' .. '9'])))
-    )
-
-quotedName :: Parser String
-quotedName = lexeme stringLiteral
+name = variable <|> quotedVariable
 
 symbol :: Parser FREDValue
-symbol = Symbol <$> lexeme (char '`' *> name)
+symbol = Symbol <$> (char '$' *> name)
+
+blob :: Parser FREDValue
+blob = Blob . BC.pack <$> (char '#' *> stringLiteral)
 
 main :: IO ()
 main = do
-    result <- parseFromFile value "test.fred"
+    result <- parseFromFile document "test.fred"
     case result of
         Left  err -> print err
         Right xs  -> print xs
