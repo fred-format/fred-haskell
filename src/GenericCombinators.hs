@@ -1,9 +1,9 @@
 module GenericCombinators
     ( stringLiteral
-    , variable
-    , quotedVariable
-    , lexeme
+    , blobString
+    , name
     , ws
+    , ws1
     )
 where
 
@@ -13,28 +13,24 @@ import           Data.Functor
 import           Data.Char
 import           Numeric
 
+name :: Parser String
+name = variable <|> quotedVariable
 
 variable :: Parser String
-variable = (:) <$> variableChar <*> many variableCharWithDigits
-
+variable = (++) <$> many1 variableChar <*> many variableCharWithDigits
 
 variableChar :: Parser Char
 variableChar =
-    oneOf (['>' .. 'Z'] ++ ['a' .. 'z'] ++ ['!', '%', '&', '.', '<', '^', '_'])
+    noneOf ("#\"`$:;{}[]=()\t\r\n ," ++ ['0' .. '9'])
 
 variableCharWithDigits :: Parser Char
-variableCharWithDigits = oneOf
-    (  ['>' .. 'Z']
-    ++ ['a' .. 'z']
-    ++ ['!', '%', '&', '.', '<', '^', '_']
-    ++ ['0' .. '9']
-    )
+variableCharWithDigits = noneOf "#\"`$:;{}[]=()\t\r\n ,"
 
 quotedVariable :: Parser String
-quotedVariable = char '`' *> many character' <* char '`'
+quotedVariable = char '`' *> many quotedVariableChar <* char '`'
 
-character' :: Parser Char
-character' =
+quotedVariableChar :: Parser Char
+quotedVariableChar =
     noneOf "`\\"
         <|> try (string "\\n" $> '\n')
         <|> try (string "\\`" $> '`')
@@ -48,8 +44,25 @@ character' =
         <|> try (string "\\u" *> unicode 4)
         <|> try (string "\\U" *> unicode 8)
 
+blobString :: Parser String
+blobString = char '"' *> many blobChar <* char '"'
+
+blobChar :: Parser Char
+blobChar = noneOf "\"\\\\u\\U"
+            <|> try (string "\\n" $> '\n')
+            <|> try (string "\\\"" $> '\"')
+            <|> try (string "\\\\" $> '\\')
+            <|> try (string "\\/" $> '/')
+            <|> try (string "\\b" $> '\b')
+            <|> try (string "\\f" $> '\f')
+            <|> try (string "\\r" $> '\r')
+            <|> try (string "\\t" $> '\t')
+            <|> try (string "\\x" *> unicode 2)
+
+
 stringLiteral :: Parser String
 stringLiteral = char '"' *> many character <* char '"'
+
 
 character :: Parser Char
 character =
@@ -76,8 +89,8 @@ failIfOutUnicode :: Int -> Parser Char
 failIfOutUnicode n | n > 1114111 = unexpected "outside unicode"
                    | otherwise   = pure (chr n)
 
-ws :: Parser String
-ws = many (oneOf " \t\n,")
+ws :: Parser [String]
+ws =  many (many1 (oneOf " \t\n\r,") <|> (char ';' *> manyTill anyChar newline))
 
-lexeme :: Parser a -> Parser a
-lexeme p = ws *> p <* ws
+ws1 :: Parser [String]
+ws1 = many1 (many1 (oneOf " \t\n\r,") <|> (char ';' *> manyTill anyChar newline))

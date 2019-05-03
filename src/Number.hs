@@ -87,8 +87,6 @@ expo =
                 digits <- many1 digit
                 return (e : sign ++ digits)
             )
--- <|> ((:) <$> char 'E' <*> ((++) <$> sign <*> many1 digit))
--- <|> ((:) <$> char 'e' <*> ((++) <$> sign <*> many1 digit))
-
+            
 sign :: Parser [Char]
 sign = string "" <|> string "-" <|> string "+"

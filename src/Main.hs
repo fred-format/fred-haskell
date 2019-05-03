@@ -5,6 +5,7 @@ import           Text.Parsec.String
 import           Data.Functor
 import           Data.Maybe
 import           Data.Fixed
+import           Data.List
 import qualified Data.ByteString.Char8         as BC
 
 import           Data.Char
@@ -20,16 +21,23 @@ import           Number                         ( number
                                                 , frac
                                                 )
 import           GenericCombinators             ( stringLiteral
-                                                , variable
-                                                , quotedVariable
-                                                , lexeme
+                                                , blobString
+                                                , name
                                                 , ws
+                                                , ws1
                                                 )
-document :: Parser FREDValue
-document = (A <$> stream) <|> value
-    where
-        stream :: Parser [FREDValue]
-        stream = string "---" *> ws  *> value `endBy` ( ws *> string "---" <* ws)
+document :: Parser FREDValue -- comentario
+document = do
+    skipMany comment
+    doc <- (A <$> stream) <|> value
+    skipMany comment
+    return doc
+  where
+    stream :: Parser [FREDValue]
+    stream = string "---" *> ws *> value `endBy` (ws *> string "---" <* ws)
+
+comment :: Parser FREDValue
+comment = char ';' *> manyTill anyChar newline $> NULL
 
 value :: Parser FREDValue
 value = tagged <|> atom
@@ -67,7 +75,7 @@ voidTag = Tag <$> voidTag'
   where
     voidTag' = do
         char '('
-        ws
+        ws 
         tagValue <- name
         ws
         metaValue <- manyMetaItem
@@ -78,10 +86,10 @@ meta :: Parser [(String, FREDValue)]
 meta = char '(' *> ws *> manyMetaItem <* char ')'
 
 manyMetaItem :: Parser [(String, FREDValue)]
-manyMetaItem = metaItem `sepEndBy` many1 (oneOf " \t\n,")
+manyMetaItem = metaItem `sepEndBy` ws1
 
 metaItem :: Parser (String, FREDValue)
-metaItem = try meta' <|> voidMeta
+metaItem = meta'
 
 meta' :: Parser (String, FREDValue)
 meta' = do
@@ -91,11 +99,6 @@ meta' = do
     ws
     value <- atom
     return (key, value)
-
-voidMeta :: Parser (String, FREDValue)
-voidMeta = do
-    value <- name
-    return (value, NULL)
 
 boolTrue :: Parser Bool
 boolTrue = try (string "true") $> True
@@ -114,11 +117,11 @@ fredString = S <$> stringLiteral
 
 array :: Parser FREDValue
 array =
-    A <$> (char '[' *> ws *> atom `sepEndBy` many1 (oneOf " \t\n,") <* char ']')
+    A <$> (char '[' *> ws *> atom `sepEndBy` ws1 <* char ']')
 
 object :: Parser FREDValue
 object =
-    O <$> (char '{' *> ws *> pair `sepEndBy` many1 (oneOf " \t\n,") <* char '}')
+    O <$> (char '{' *> ws *> pair `sepEndBy` ws1 <* char '}')
 
 pair :: Parser (String, FREDValue)
 pair = do
@@ -129,14 +132,11 @@ pair = do
     value <- value
     return (key, value)
 
-name :: Parser String
-name = variable <|> quotedVariable
-
 symbol :: Parser FREDValue
 symbol = Symbol <$> (char '$' *> name)
 
 blob :: Parser FREDValue
-blob = Blob . BC.pack <$> (char '#' *> stringLiteral)
+blob = Blob . BC.pack <$> (char '#' *> blobString)
 
 main :: IO ()
 main = do
