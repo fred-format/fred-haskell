@@ -1,12 +1,12 @@
-module DateTime
+module FRED.Parser.DateTime
     ( localTime
     , dateOrDateTime
     )
 where
 
-import           FREDValue
-import           GenericCombinators
-import           Number                         ( frac )
+import           FRED.Value
+import           FRED.Parser.String
+import           FRED.Parser.Number             ( frac )
 import           Text.Parsec
 import           Text.Parsec.String
 import           Data.Time

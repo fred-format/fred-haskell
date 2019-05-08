@@ -1,4 +1,4 @@
-module Number
+module FRED.Parser.Number
     ( number
     , frac
     )
@@ -7,8 +7,8 @@ where
 import           Text.Parsec
 import           Text.Parsec.String
 import           Numeric
-import           GenericCombinators
-import           FREDValue
+import           FRED.Parser.String
+import           FRED.Value                     ( FREDValue(..) )
 import           Data.Char                      ( digitToInt )
 import           Data.List                      ( foldl' )
 
@@ -87,6 +87,6 @@ expo =
                 digits <- many1 digit
                 return (e : sign ++ digits)
             )
-            
+
 sign :: Parser [Char]
 sign = string "" <|> string "-" <|> string "+"

@@ -1,4 +1,14 @@
-module Main where
+{-|
+Module      :  FRED
+
+This module exposes a function 'FRED.parse' that receives a FRED Document
+and return a representation as a Haskell Value.
+-}
+
+module FRED
+    ( FRED.parse
+    )
+where
 
 import           Text.Parsec
 import           Text.Parsec.String
@@ -13,20 +23,20 @@ import           Control.Applicative     hiding ( many
                                                 , (<|>)
                                                 )
 
-import           FREDValue                      ( FREDValue(..) )
-import           DateTime                       ( localTime
+import           FRED.Value                     ( FREDValue(..) )
+import           FRED.Parser.DateTime           ( localTime
                                                 , dateOrDateTime
                                                 )
-import           Number                         ( number
+import           FRED.Parser.Number             ( number
                                                 , frac
                                                 )
-import           GenericCombinators             ( stringLiteral
+import           FRED.Parser.String             ( stringLiteral
                                                 , blobString
                                                 , name
                                                 , ws
                                                 , ws1
                                                 )
-document :: Parser FREDValue -- comentario
+document :: Parser FREDValue
 document = do
     skipMany comment
     doc <- (A <$> stream) <|> value
@@ -53,7 +63,7 @@ atom =
         <|> blob
         <|> fredString
         <|> bool
-        <|> Main.null
+        <|> FRED.null
 
 
 tagged :: Parser FREDValue
@@ -75,7 +85,7 @@ voidTag = Tag <$> voidTag'
   where
     voidTag' = do
         char '('
-        ws 
+        ws
         tagValue <- name
         ws
         metaValue <- manyMetaItem
@@ -116,12 +126,10 @@ fredString :: Parser FREDValue
 fredString = S <$> stringLiteral
 
 array :: Parser FREDValue
-array =
-    A <$> (char '[' *> ws *> atom `sepEndBy` ws1 <* char ']')
+array = A <$> (char '[' *> ws *> atom `sepEndBy` ws1 <* char ']')
 
 object :: Parser FREDValue
-object =
-    O <$> (char '{' *> ws *> pair `sepEndBy` ws1 <* char '}')
+object = O <$> (char '{' *> ws *> pair `sepEndBy` ws1 <* char '}')
 
 pair :: Parser (String, FREDValue)
 pair = do
@@ -138,9 +146,6 @@ symbol = Symbol <$> (char '$' *> name)
 blob :: Parser FREDValue
 blob = Blob . BC.pack <$> (char '#' *> blobString)
 
-main :: IO ()
-main = do
-    result <- parseFromFile document "test.fred"
-    case result of
-        Left  err -> print err
-        Right xs  -> print xs
+-- | Parse a FRED Document.
+parse :: String -> Either ParseError FREDValue
+parse = Text.Parsec.parse document ""

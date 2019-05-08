@@ -1,10 +1,10 @@
-module FREDValue
+module FRED.Value
     ( FREDValue(..)
     )
 where
 
 import           Data.Time
-import qualified Data.ByteString as B
+import qualified Data.ByteString               as B
 
 data FREDValue =
     B Bool

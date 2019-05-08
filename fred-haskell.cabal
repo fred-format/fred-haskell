@@ -1,27 +1,40 @@
 name:                fred-haskell
 version:             0.0.1.0
--- synopsis:
--- description:
+synopsis:            Implementation of FRED in Haskell
+description:         FRED (Flexible REpresentation of Data) is a data-interchange format.
+                     It was created with the goal to be easy for humans to read and write
+                     but also easy to create parsers. It has more data types than JSON
+                     and some features like support for metadata and tags.
+                     .
+                     fred-haskell is implemented  using parsec.
+                     .
+                     The entry point is the "FRED" module which provides
+                     a function to parse FRED Text.
+                     
 homepage:            https://github.com/fred-format/fred-haskell#readme
 license:             MIT
 license-file:        LICENSE
-author:              Matheus de Sousa Bernardo
-maintainer:          matheussbernardo@gmail.com
+author:              Matheus de Sousa Bernardo <matheussbernardo@gmail.com>
+maintainer:          Matheus de Sousa Bernardo <matheussbernardo@gmail.com>
 copyright:           2019 Matheus de Sousa Bernardo
-category:            Parser
+category:            Parsing
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
 
-executable fred-haskell
+source-repository head
+    type: git
+    location: https://github.com/fred-format/fred-haskell
+
+library
   hs-source-dirs:      src
-  main-is:             Main.hs
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
                     ,  parsec 
                     ,  time
                     ,  bytestring
-  other-modules:       GenericCombinators
-                    ,  FREDValue
-                    ,  Number
-                    ,  DateTime
+  exposed-modules:     FRED
+                    ,  FRED.Value
+  other-modules:       FRED.Parser.String
+                    ,  FRED.Parser.Number
+                    ,  FRED.Parser.DateTime

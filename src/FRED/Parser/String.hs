@@ -1,4 +1,4 @@
-module GenericCombinators
+module FRED.Parser.String
     ( stringLiteral
     , blobString
     , name
@@ -17,11 +17,10 @@ name :: Parser String
 name = variable <|> quotedVariable
 
 variable :: Parser String
-variable = (++) <$> many1 variableChar <*> many variableCharWithDigits
+variable = (:) <$> variableChar <*> many variableCharWithDigits
 
 variableChar :: Parser Char
-variableChar =
-    noneOf ("#\"`$:;{}[]=()\t\r\n ," ++ ['0' .. '9'])
+variableChar = noneOf ("#\"`$:;{}[]=()\t\r\n ," ++ ['0' .. '9'])
 
 variableCharWithDigits :: Parser Char
 variableCharWithDigits = noneOf "#\"`$:;{}[]=()\t\r\n ,"
@@ -48,16 +47,17 @@ blobString :: Parser String
 blobString = char '"' *> many blobChar <* char '"'
 
 blobChar :: Parser Char
-blobChar = noneOf "\"\\\\u\\U"
-            <|> try (string "\\n" $> '\n')
-            <|> try (string "\\\"" $> '\"')
-            <|> try (string "\\\\" $> '\\')
-            <|> try (string "\\/" $> '/')
-            <|> try (string "\\b" $> '\b')
-            <|> try (string "\\f" $> '\f')
-            <|> try (string "\\r" $> '\r')
-            <|> try (string "\\t" $> '\t')
-            <|> try (string "\\x" *> unicode 2)
+blobChar =
+    noneOf "\"\\\\u\\U"
+        <|> try (string "\\n" $> '\n')
+        <|> try (string "\\\"" $> '\"')
+        <|> try (string "\\\\" $> '\\')
+        <|> try (string "\\/" $> '/')
+        <|> try (string "\\b" $> '\b')
+        <|> try (string "\\f" $> '\f')
+        <|> try (string "\\r" $> '\r')
+        <|> try (string "\\t" $> '\t')
+        <|> try (string "\\x" *> unicode 2)
 
 
 stringLiteral :: Parser String
@@ -90,7 +90,8 @@ failIfOutUnicode n | n > 1114111 = unexpected "outside unicode"
                    | otherwise   = pure (chr n)
 
 ws :: Parser [String]
-ws =  many (many1 (oneOf " \t\n\r,") <|> (char ';' *> manyTill anyChar newline))
+ws = many (many1 (oneOf " \t\n\r,") <|> (char ';' *> manyTill anyChar newline))
 
 ws1 :: Parser [String]
-ws1 = many1 (many1 (oneOf " \t\n\r,") <|> (char ';' *> manyTill anyChar newline))
+ws1 =
+    many1 (many1 (oneOf " \t\n\r,") <|> (char ';' *> manyTill anyChar newline))
