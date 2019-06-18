@@ -1,23 +1,34 @@
 {-|
-Module      :  FRED.Value
+Module      :  Fred.Value
 
-This module exposes a Data Constructor 'FREDValue' that represents a FRED Document
+This module exposes a Data Constructor 'FredValue' that represents a Fred Document
 in haskell.
 -}
-module FRED.Value
-    ( FREDValue(..)
+module Fred.Value
+    ( FredDocument(..)
+    , FredValue(..)
+    , FredAtom(..)
     )
 where
 
 import           Data.Time
 import qualified Data.ByteString               as B
 
--- | FREDValue is a data type that represent a FRED Document
-data FREDValue =
+-- | FredDocument is a data type that represent a Fred Document
+data FredDocument =
+    Stream [FredValue]
+    | Doc FredValue
+    deriving Show
+
+data FredValue =
+    Tag (String, [(String, FredAtom)], FredAtom) | NonTag FredAtom
+    deriving Show
+
+data FredAtom =
     B Bool
     | S String
-    | A [FREDValue]
-    | O [(String, FREDValue)]
+    | A [FredAtom]
+    | O [(String, FredValue)]
     | N (Either Integer Float)
     | Symbol String
     | Blob B.ByteString
@@ -25,6 +36,5 @@ data FREDValue =
     | LTime TimeOfDay
     | LDateTime LocalTime -- LocalTime Day TimeOfDay
     | DateTime ZonedTime -- ZonedTime LocalTime TimeZone
-    | Tag (String, [(String, FREDValue)], FREDValue)
     | NULL
     deriving Show

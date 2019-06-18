@@ -1,4 +1,4 @@
-module FRED.Parser.Number
+module Fred.Parser.Number
     ( number
     , frac
     )
@@ -7,12 +7,12 @@ where
 import           Text.Parsec
 import           Text.Parsec.String
 import           Numeric
-import           FRED.Parser.String
-import           FRED.Value                     ( FREDValue(..) )
+import           Fred.Parser.String
+import           Fred.Value                     ( FredAtom(..) )
 import           Data.Char                      ( digitToInt )
 import           Data.List                      ( foldl' )
 
-number :: Parser FREDValue
+number :: Parser FredAtom
 number =
     (N <$> try hex)
         <|> (N <$> try oct)

@@ -1,15 +1,15 @@
 name:                fred-haskell
 version:             0.1.1.0
-synopsis:            Implementation of FRED in Haskell
-description:         FRED (Flexible REpresentation of Data) is a data-interchange format.
+synopsis:            Implementation of Fred in Haskell
+description:         Fred (Flexible REpresentation of Data) is a data-interchange format.
                      It was created with the goal to be easy for humans to read and write
                      but also easy to create parsers. It has more data types than JSON
                      and some features like support for metadata and tags.
                      .
                      fred-haskell is implemented  using parsec.
                      .
-                     The entry point is the "FRED" module which provides
-                     a function to parse FRED Text.
+                     The entry point is the "Fred" module which provides
+                     a function to parse Fred Text.
                      
 homepage:            https://github.com/fred-format/fred-haskell#readme
 license:             MIT
@@ -33,8 +33,31 @@ library
                        bytestring   >= 0.10.8 && < 0.11,
                        parsec       >= 3.1.13 && < 3.2,
                        time         >= 1.8.0 && < 1.9
-  exposed-modules:     FRED
-                    ,  FRED.Value
-  other-modules:       FRED.Parser.String
-                    ,  FRED.Parser.Number
-                    ,  FRED.Parser.DateTime
+  exposed-modules:     Fred
+                    ,  Fred.Value
+  other-modules:       Fred.Parser.String
+                    ,  Fred.Parser.Number
+                    ,  Fred.Parser.DateTime
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:
+      test
+  build-depends:
+      base ==4.*
+    , hspec ==2.*
+    , fred-haskell
+    , strict
+    , text
+    , vector
+    , unordered-containers
+    , bytestring
+    , aeson
+    , aeson-pretty
+    , directory
+    , process
+    
+  other-modules: FredSpec
+  default-language: Haskell2010
+  build-tool-depends: hspec-discover:hspec-discover == 2.*

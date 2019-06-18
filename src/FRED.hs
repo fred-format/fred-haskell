@@ -1,13 +1,13 @@
 {-|
-Module      :  FRED
+Module      :  Fred
 
-This module exposes a function 'FRED.parse' that receives a FRED Document
+This module exposes a function 'Fred.parse' that receives a Fred Document
 and return a representation as a Haskell Value.
 -}
 
-module FRED
-    ( FRED.parse
-    )
+module Fred
+  ( Fred.parse
+  )
 where
 
 import           Text.Parsec
@@ -23,92 +23,96 @@ import           Control.Applicative     hiding ( many
                                                 , (<|>)
                                                 )
 
-import           FRED.Value                     ( FREDValue(..) )
-import           FRED.Parser.DateTime           ( localTime
+import           Fred.Value                     ( FredDocument(..)
+                                                , FredValue(..)
+                                                , FredAtom(..)
+                                                )
+import           Fred.Parser.DateTime           ( localTime
                                                 , dateOrDateTime
                                                 )
-import           FRED.Parser.Number             ( number
+import           Fred.Parser.Number             ( number
                                                 , frac
                                                 )
-import           FRED.Parser.String             ( stringLiteral
+import           Fred.Parser.String             ( stringLiteral
                                                 , blobString
                                                 , name
                                                 , ws
                                                 , ws1
                                                 )
-document :: Parser FREDValue
+document :: Parser FredDocument
 document = do
-    skipMany comment
-    doc <- (A <$> stream) <|> value
-    skipMany comment
-    return doc
-  where
-    stream :: Parser [FREDValue]
-    stream = string "---" *> ws *> value `endBy` (ws *> string "---" <* ws)
+  skipMany comment
+  doc <- (Stream <$> stream) <|> (Doc <$> value)
+  skipMany comment
+  eof
+  return doc
+ where
+  stream :: Parser [FredValue]
+  stream = string "---" *> ws *> value `endBy` (ws *> string "---" <* ws)
 
-comment :: Parser FREDValue
+comment :: Parser FredAtom
 comment = char ';' *> manyTill anyChar newline $> NULL
 
-value :: Parser FREDValue
-value = tagged <|> atom
+value :: Parser FredValue
+value = tagged <|> (NonTag <$> atom)
 
-atom :: Parser FREDValue
+atom :: Parser FredAtom
 atom =
-    object
-        <|> array
-        <|> dateOrDateTime
-        <|> localTime
-        <|> symbol
-        <|> number
-        <|> blob
-        <|> fredString
-        <|> bool
-        <|> FRED.null
+  object
+    <|> array
+    <|> dateOrDateTime
+    <|> localTime
+    <|> symbol
+    <|> number
+    <|> blob
+    <|> fredString
+    <|> bool
+    <|> Fred.null
 
 
-tagged :: Parser FREDValue
+tagged :: Parser FredValue
 tagged = tag <|> voidTag
 
-tag :: Parser FREDValue
+tag :: Parser FredValue
 tag = Tag <$> try tag'
-  where
-    tag' = do
-        tagValue <- name
-        ws
-        metaValue <- option [] meta
-        ws
-        value <- atom
-        return (tagValue, metaValue, value)
-
-voidTag :: Parser FREDValue
-voidTag = Tag <$> voidTag'
-  where
-    voidTag' = do
-        char '('
-        ws
-        tagValue <- name
-        ws
-        metaValue <- manyMetaItem
-        char ')'
-        return (tagValue, metaValue, NULL)
-
-meta :: Parser [(String, FREDValue)]
-meta = char '(' *> ws *> manyMetaItem <* char ')'
-
-manyMetaItem :: Parser [(String, FREDValue)]
-manyMetaItem = metaItem `sepEndBy` ws1
-
-metaItem :: Parser (String, FREDValue)
-metaItem = meta'
-
-meta' :: Parser (String, FREDValue)
-meta' = do
-    key <- name
+ where
+  tag' = do
+    tagValue <- name
     ws
-    char '='
+    metaValue <- option [] meta
     ws
     value <- atom
-    return (key, value)
+    return (tagValue, metaValue, value)
+
+voidTag :: Parser FredValue
+voidTag = Tag <$> voidTag'
+ where
+  voidTag' = do
+    char '('
+    ws
+    tagValue <- name
+    ws
+    metaValue <- manyMetaItem
+    char ')'
+    return (tagValue, metaValue, NULL)
+
+meta :: Parser [(String, FredAtom)]
+meta = char '(' *> ws *> manyMetaItem <* char ')'
+
+manyMetaItem :: Parser [(String, FredAtom)]
+manyMetaItem = metaItem `sepEndBy` ws1
+
+metaItem :: Parser (String, FredAtom)
+metaItem = meta'
+
+meta' :: Parser (String, FredAtom)
+meta' = do
+  key <- name
+  ws
+  char '='
+  ws
+  value <- atom
+  return (key, value)
 
 boolTrue :: Parser Bool
 boolTrue = try (string "true") $> True
@@ -116,36 +120,36 @@ boolTrue = try (string "true") $> True
 boolFalse :: Parser Bool
 boolFalse = try (string "false") $> False
 
-bool :: Parser FREDValue
+bool :: Parser FredAtom
 bool = B <$> (boolTrue <|> boolFalse)
 
-null :: Parser FREDValue
+null :: Parser FredAtom
 null = string "null" $> NULL
 
-fredString :: Parser FREDValue
+fredString :: Parser FredAtom
 fredString = S <$> stringLiteral
 
-array :: Parser FREDValue
+array :: Parser FredAtom
 array = A <$> (char '[' *> ws *> atom `sepEndBy` ws1 <* char ']')
 
-object :: Parser FREDValue
+object :: Parser FredAtom
 object = O <$> (char '{' *> ws *> pair `sepEndBy` ws1 <* char '}')
 
-pair :: Parser (String, FREDValue)
+pair :: Parser (String, FredValue)
 pair = do
-    key <- name
-    ws
-    char ':'
-    ws
-    value <- value
-    return (key, value)
+  key <- name
+  ws
+  char ':'
+  ws
+  value <- value
+  return (key, value)
 
-symbol :: Parser FREDValue
+symbol :: Parser FredAtom
 symbol = Symbol <$> (char '$' *> name)
 
-blob :: Parser FREDValue
+blob :: Parser FredAtom
 blob = Blob . BC.pack <$> (char '#' *> blobString)
 
--- | Parse a FRED Document.
-parse :: String -> Either ParseError FREDValue
+-- | Parse a Fred Document.
+parse :: String -> Either ParseError FredDocument
 parse = Text.Parsec.parse document ""

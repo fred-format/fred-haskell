@@ -1,19 +1,19 @@
-module FRED.Parser.DateTime
+module Fred.Parser.DateTime
     ( localTime
     , dateOrDateTime
     )
 where
 
-import           FRED.Value
-import           FRED.Parser.String
-import           FRED.Parser.Number             ( frac )
+import           Fred.Value
+import           Fred.Parser.String
+import           Fred.Parser.Number             ( frac )
 import           Text.Parsec
 import           Text.Parsec.String
 import           Data.Time
 import           Data.Functor
 
 
-localTime :: Parser FREDValue
+localTime :: Parser FredAtom
 localTime = (LTime <$> try time)
 
 localTimeOrZonedTime :: Parser (TimeOfDay, Maybe TimeZone)
@@ -49,16 +49,15 @@ convertToTimeZone '-' hour minutes =
 
 
 
-dateOrDateTime :: Parser FREDValue
+dateOrDateTime :: Parser FredAtom
 dateOrDateTime = do
     date <- try date
     returnDateOrDateTime date <$> option Nothing rest
   where
     rest :: Parser (Maybe (TimeOfDay, Maybe TimeZone))
-    rest = Just <$> (followingTime)
+    rest = Just <$> followingTime
 
-    returnDateOrDateTime
-        :: Day -> Maybe (TimeOfDay, Maybe TimeZone) -> FREDValue
+    returnDateOrDateTime :: Day -> Maybe (TimeOfDay, Maybe TimeZone) -> FredAtom
     returnDateOrDateTime date rest = case rest of
         Nothing              -> LDate date
         Just (time, Nothing) -> LDateTime $ LocalTime date time

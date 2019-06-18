@@ -1,4 +1,4 @@
-module FRED.Parser.String
+module Fred.Parser.String
     ( stringLiteral
     , blobString
     , name
@@ -61,12 +61,13 @@ blobChar =
 
 
 stringLiteral :: Parser String
-stringLiteral = char '"' *> many character <* char '"'
+stringLiteral =
+    char '"' *> many character <* char '"'
 
 
 character :: Parser Char
 character =
-    noneOf "\"\\"
+    (noneOf "\"\\")
         <|> try (string "\\n" $> '\n')
         <|> try (string "\\\"" $> '\"')
         <|> try (string "\\\\" $> '\\')
