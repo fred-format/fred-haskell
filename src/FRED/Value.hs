@@ -12,7 +12,10 @@ module Fred.Value
 where
 
 import           Data.Time
+import           Data.List
 import qualified Data.ByteString               as B
+import qualified Data.ByteString.Char8         as BC
+
 
 -- | FredDocument is a data type that represent a Fred Document
 data FredDocument =

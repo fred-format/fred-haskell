@@ -7,6 +7,7 @@ and return a representation as a Haskell Value.
 
 module Fred
   ( Fred.parse
+  , Fred.minify
   )
 where
 
@@ -15,8 +16,10 @@ import           Text.Parsec.String
 import           Data.Functor
 import           Data.Maybe
 import           Data.Fixed
+import           Data.Either
 import           Data.List
 import qualified Data.ByteString.Char8         as BC
+import           System.Environment
 
 import           Data.Char
 import           Control.Applicative     hiding ( many
@@ -153,3 +156,58 @@ blob = Blob . BC.pack <$> (char '#' *> blobString)
 -- | Parse a Fred Document.
 parse :: String -> Either ParseError FredDocument
 parse = Text.Parsec.parse document ""
+
+minify :: FredDocument -> IO ()
+minify fred = writeFile "dump.fred" (dump fred)
+
+
+
+
+-- Dump TypeClass for Fred
+class Dump a where
+  dump :: a -> String
+
+instance Dump FredDocument where
+  dump (Stream values) = 
+    (Data.List.foldl dumpStream "" values) ++ "---"
+  dump (Doc value) = dump value
+
+dumpStream :: String -> FredValue -> String
+dumpStream acc value = acc ++ "---" ++ dump value
+
+instance Dump FredValue where
+  dump (Tag (tag, meta, NULL)) = "(" ++ tag ++ dumpMeta meta ++ ")"
+  dump (Tag (tag, meta, atom)) =
+    tag ++ "(" ++ dumpMeta meta ++ ")" ++ dump atom
+  dump (NonTag atom) = dump atom
+
+dumpMeta :: [(String, FredAtom)] -> String
+dumpMeta meta = drop 1 (Data.List.foldl dumpMetaItem "" meta)
+ where
+  dumpMetaItem :: String -> (String, FredAtom) -> String
+  dumpMetaItem acc (name, atom) = acc ++ " " ++ name ++ "=" ++ (dump atom)
+
+instance Dump FredAtom where
+  dump (B         True         ) = "true"
+  dump (B         False        ) = "false"
+  dump (S         string       ) = "\"" ++ string ++ "\""
+  dump (A array) = "[" ++ drop 1 (Data.List.foldl dumpArr "" array) ++ "]"
+  dump (O object) = "{" ++ drop 1 (Data.List.foldl dumpObj "" object) ++ "}"
+  dump (N         (Left  int  )) = show int
+  dump (N         (Right float)) = show float
+  dump (Symbol    symb         ) = "$" ++ symb
+  dump (Blob      str          ) = "#" ++ "\"" ++ BC.unpack str ++ "\"" 
+  dump (LDate     day          ) = show day
+  dump (LTime     time         ) = show time
+  dump (LDateTime localTime    ) = show localTime
+  dump (DateTime  zonedTime    ) = show zonedTime
+  dump NULL                      = "null"
+
+
+dumpArr :: String -> FredAtom -> String
+dumpArr acc atom = acc ++ " " ++ dump atom
+
+dumpObj :: String -> (String, FredValue) -> String
+dumpObj acc (key, value) 
+  | ' ' `elem` key = acc ++ " " ++ "`" ++ key ++ "`" ++ ":" ++ dump value
+  | otherwise = acc ++ " " ++ key ++ ":" ++ dump value
