@@ -34,28 +34,45 @@ instance ToJSON FredValue where
     toJSON (Tag (tag, [], atom)) =
         object ["tag" .= tag, "meta" .= Null, "value" .= toJSON atom]
 
-    toJSON (Tag (tag, metaData, atom)) =
-        object ["tag" .= tag, "meta" .= metaData, "value" .= toJSON atom]
+    toJSON (Tag (tag, metaData, atom)) = object
+        [ "tag" .= tag
+        , "meta" .= object (Data.List.map toPair metaData)
+        , "value" .= toJSON atom
+        ]
 
-    toJSON (NonTag atom) =
-        object ["tag" .= Null, "meta" .= Null, "value" .= toJSON atom]
+    toJSON (NonTag atom) = toJSON atom
 
 instance ToJSON FredAtom where
-    toJSON (A arrayAtom )            = toJSON arrayAtom
-    toJSON (O objectAtom)            = toJSON objectAtom
-    toJSON NULL                      = "null"
-    toJSON (B bool) = toJSON $ Data.List.map toLower (show bool)
-    toJSON (S         str          ) = toJSON str
-    toJSON (N         (Left  int  )) = toJSON $ show int
-    toJSON (N         (Right float)) = toJSON $ show float
-    toJSON (Symbol    str          ) = toJSON str
-    toJSON (Blob      str          ) = toJSON (BC.unpack str)
-    toJSON (LDate     day          ) = toJSON day
-    toJSON (LTime     time         ) = toJSON time
-    toJSON (LDateTime localTime    ) = toJSON localTime
-    toJSON (DateTime  zonedTime    ) = toJSON zonedTime
+    toJSON (A arrayAtom ) = toJSON arrayAtom
+    toJSON (O objectAtom) = object
+        [ "type" .= toJSON ("object" :: String)
+        , ("value" .= object (Data.List.map toPair objectAtom))
+        ]
+    toJSON NULL              = Null
+    toJSON (B bool         ) = toJSON bool
+    toJSON (S str          ) = toJSON str
+    toJSON (N (Left  int  )) = toJSON int
+    toJSON (N (Right float)) = toJSON float
 
-toPair :: (String, FredAtom) -> (T.Text, Value)
+    toJSON (Symbol str) =
+        object ["value" .= (toJSON str), "type" .= toJSON ("symbol" :: String)]
+
+    toJSON (Blob str) =
+        object
+            [ "type" .= toJSON ("blob" :: String)
+            , "value" .= toJSON (BC.unpack str)
+            ]
+    toJSON (LDate day) =
+        object ["type" .= toJSON ("date" :: String), "value" .= toJSON day]
+    toJSON (LTime time) =
+        object ["type" .= toJSON ("date" :: String), "value" .= toJSON time]
+    toJSON (LDateTime localTime) = object
+        ["type" .= toJSON ("date" :: String), "value" .= toJSON localTime]
+    toJSON (DateTime zonedTime) = object
+        ["type" .= toJSON ("date" :: String), "value" .= toJSON zonedTime]
+
+
+toPair :: ToJSON a => (String, a) -> (T.Text, Value)
 toPair (name, value) = (T.pack name, toJSON value)
 
 
@@ -87,7 +104,26 @@ validTests = do
 getFred :: String -> Either String String
 getFred input = case Fred.parse input of
     Left  parseError -> Left "Error"
-    Right result     -> Right $ BL.unpack $ encodePretty result
+    Right result     -> Right $ BL.unpack $ encodePretty' fredConfig result
+
+fredConfig :: Config
+fredConfig = Config
+    { confIndent          = Spaces 4
+    , confCompare         = keyOrder
+                                [ "tag"
+                                , "meta"
+                                , "type"
+                                , "value"
+                                , "key"
+                                , "key1"
+                                , "key 1"
+                                , "key 2"
+                                , "name"
+                                , "age"
+                                ]
+    , confNumFormat       = Generic
+    , confTrailingNewline = False
+    }
 
 
 readValidExamples :: String -> IO [(String, (IO String, IO String))]

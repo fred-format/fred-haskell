@@ -24,13 +24,13 @@ data FredDocument =
     deriving Show
 
 data FredValue =
-    Tag (String, [(String, FredAtom)], FredAtom) | NonTag FredAtom
+    Tag (String, [(String, FredAtom)], FredValue) | NonTag FredAtom
     deriving Show
 
 data FredAtom =
     B Bool
     | S String
-    | A [FredAtom]
+    | A [FredValue]
     | O [(String, FredValue)]
     | N (Either Integer Float)
     | Symbol String

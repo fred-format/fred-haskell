@@ -75,7 +75,7 @@ date = do
     fromMaybeP "date" date
 
 followingTime :: Parser (TimeOfDay, Maybe TimeZone)
-followingTime = char 'T' *> localTimeOrZonedTime
+followingTime = (char 'T' <|> char '_') *> localTimeOrZonedTime
 
 
 fromMaybeP :: String -> Maybe a -> Parser a

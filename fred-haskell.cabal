@@ -1,5 +1,5 @@
 name:                fred-haskell
-version:             0.1.1.0
+version:             0.1.1.1
 synopsis:            Implementation of Fred in Haskell
 description:         Fred (Flexible REpresentation of Data) is a data-interchange format.
                      It was created with the goal to be easy for humans to read and write

@@ -68,7 +68,13 @@ realExp (e : '+' : digits) = read digits
 realExp (e       : digits) = read digits
 
 int :: Parser [Char]
-int = many1 digit
+int = do
+    firstDigit <- digit
+    digits <- many (digit <|> (char '_' *> digit))
+    let r = (firstDigit : digits)
+    return r
+    
+    
 
 frac :: Parser [Char]
 frac = ((:) <$> char '.' <*> many1 digit)

@@ -7,6 +7,7 @@ and return a representation as a Haskell Value.
 
 module Fred
   ( Fred.parse
+  , Fred.parseFromFile
   , Fred.minify
   )
 where
@@ -84,7 +85,7 @@ tag = Tag <$> try tag'
     ws
     metaValue <- option [] meta
     ws
-    value <- atom
+    value <- value 
     return (tagValue, metaValue, value)
 
 voidTag :: Parser FredValue
@@ -97,7 +98,7 @@ voidTag = Tag <$> voidTag'
     ws
     metaValue <- manyMetaItem
     char ')'
-    return (tagValue, metaValue, NULL)
+    return (tagValue, metaValue, NonTag NULL)
 
 meta :: Parser [(String, FredAtom)]
 meta = char '(' *> ws *> manyMetaItem <* char ')'
@@ -133,7 +134,7 @@ fredString :: Parser FredAtom
 fredString = S <$> stringLiteral
 
 array :: Parser FredAtom
-array = A <$> (char '[' *> ws *> atom `sepEndBy` ws1 <* char ']')
+array = A <$> (char '[' *> ws *> value `sepEndBy` ws1 <* char ']')
 
 object :: Parser FredAtom
 object = O <$> (char '{' *> ws *> pair `sepEndBy` ws1 <* char '}')
@@ -157,8 +158,16 @@ blob = Blob . BC.pack <$> (char '#' *> blobString)
 parse :: String -> Either ParseError FredDocument
 parse = Text.Parsec.parse document ""
 
-minify :: FredDocument -> IO ()
-minify fred = writeFile "dump.fred" (dump fred)
+parseFromFile fname = do
+  input <- readFile fname
+  return (runParser document () fname input)
+
+
+minify :: IO ()
+minify = do
+  parsedFred <- Fred.parseFromFile "person.fred"
+  let fred =  (fromRight (Doc (NonTag NULL)) (parsedFred))
+  writeFile "dump.fred" (dump fred)
 
 
 
@@ -176,7 +185,9 @@ dumpStream :: String -> FredValue -> String
 dumpStream acc value = acc ++ "---" ++ dump value
 
 instance Dump FredValue where
-  dump (Tag (tag, meta, NULL)) = "(" ++ tag ++ dumpMeta meta ++ ")"
+  dump (Tag (tag, meta, NonTag NULL)) = "(" ++ tag ++ dumpMeta meta ++ ")"
+  dump (Tag (tag, [], atom)) =
+    tag ++ dump atom
   dump (Tag (tag, meta, atom)) =
     tag ++ "(" ++ dumpMeta meta ++ ")" ++ dump atom
   dump (NonTag atom) = dump atom
@@ -204,7 +215,7 @@ instance Dump FredAtom where
   dump NULL                      = "null"
 
 
-dumpArr :: String -> FredAtom -> String
+dumpArr :: String -> FredValue -> String
 dumpArr acc atom = acc ++ " " ++ dump atom
 
 dumpObj :: String -> (String, FredValue) -> String
