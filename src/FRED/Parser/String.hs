@@ -1,17 +1,30 @@
 module Fred.Parser.String
-    ( stringLiteral
-    , blobString
+    ( fredString
+    , blob
+    , symbol
     , name
     , ws
     , ws1
     )
 where
 
+import           Fred.Value
 import           Text.Parsec
 import           Text.Parsec.String
 import           Data.Functor
 import           Data.Char
 import           Numeric
+import qualified Data.ByteString.Char8         as BC
+
+
+fredString :: Parser FredAtom
+fredString = S <$> stringLiteral
+
+symbol :: Parser FredAtom
+symbol = Symbol <$> (char '$' *> name)
+
+blob :: Parser FredAtom
+blob = Blob . BC.pack <$> (char '#' *> blobString)
 
 name :: Parser String
 name = variable <|> quotedVariable
@@ -61,8 +74,7 @@ blobChar =
 
 
 stringLiteral :: Parser String
-stringLiteral =
-    char '"' *> many character <* char '"'
+stringLiteral = char '"' *> many character <* char '"'
 
 
 character :: Parser Char

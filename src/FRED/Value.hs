@@ -5,8 +5,7 @@ This module exposes a Data Constructor 'FredValue' that represents a Fred Docume
 in haskell.
 -}
 module Fred.Value
-    ( FredDocument(..)
-    , FredValue(..)
+    ( FredValue(..)
     , FredAtom(..)
     )
 where
@@ -17,14 +16,8 @@ import qualified Data.ByteString               as B
 import qualified Data.ByteString.Char8         as BC
 
 
--- | FredDocument is a data type that represent a Fred Document
-data FredDocument =
-    Stream [FredValue]
-    | Doc FredValue
-    deriving Show
-
 data FredValue =
-    Tag (String, [(String, FredAtom)], FredValue) | NonTag FredAtom
+    Stream [FredValue] | Tag (String, [(String, FredAtom)], FredValue) | NonTag FredAtom
     deriving Show
 
 data FredAtom =
