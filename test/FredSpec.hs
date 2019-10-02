@@ -21,16 +21,12 @@ import qualified Data.ByteString               as B
 import qualified Data.ByteString.Lazy.Char8    as BL
 import qualified Data.ByteString.Char8         as BC
 import           Fred
-import           Fred.Value                     ( FredDocument(..)
-                                                , FredValue(..)
+import           Fred.Value                     ( FredValue(..)
                                                 , FredAtom(..)
                                                 )
-instance ToJSON FredDocument where
-    toJSON (Stream fredDoc  ) = toJSON fredDoc
-
-    toJSON (Doc    fredValue) = toJSON fredValue
-
 instance ToJSON FredValue where
+    toJSON (Stream fredValue) = toJSON fredValue
+
     toJSON (Tag (tag, [], atom)) =
         object ["tag" .= tag, "meta" .= Null, "value" .= toJSON atom]
 

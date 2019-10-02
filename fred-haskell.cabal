@@ -1,5 +1,5 @@
 name:                fred-haskell
-version:             0.1.1.1
+version:             0.1.1.2
 synopsis:            Implementation of Fred in Haskell
 description:         Fred (Flexible REpresentation of Data) is a data-interchange format.
                      It was created with the goal to be easy for humans to read and write
@@ -35,9 +35,11 @@ library
                        time         >= 1.8.0 && < 1.9
   exposed-modules:     Fred
                     ,  Fred.Value
-  other-modules:       Fred.Parser.String
+  other-modules:       Fred.Parser
+                    ,  Fred.Parser.String
                     ,  Fred.Parser.Number
                     ,  Fred.Parser.DateTime
+                    ,  Fred.Parser.Boolean
 
 test-suite spec
   type: exitcode-stdio-1.0
