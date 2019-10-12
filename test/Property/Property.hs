@@ -27,7 +27,7 @@ genFredValue = Gen.recursive
                       <*> genFredAtom
                       )
                   )
-              <*> (genFredValue)
+              <*> genFredValue
               )
     ]
 
@@ -38,7 +38,7 @@ genFredAtom = Gen.recursive
     [ B <$> Gen.bool
     , S <$> Gen.string (Range.linear 0 20) Gen.alpha
     , N <$> Gen.choice
-        [ Left <$> toInteger <$> Gen.int (Range.linear 0 maxBound)
+        [ Left . toInteger <$> Gen.int (Range.linear 0 maxBound)
         , Right <$> Gen.double (Range.linearFrac 0.0 1000.0)
         ]
     , Symbol <$> Gen.string (Range.linear 1 20) Gen.alpha
