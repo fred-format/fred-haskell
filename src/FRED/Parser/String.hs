@@ -45,7 +45,7 @@ quotedVariableChar :: Parser Char
 quotedVariableChar =
     noneOf "\"\\"
         <|> try (string "\\n" $> '\n')
-        <|> try (string "\"" $> '\"')
+        <|> try (string "\\\"" $> '\"')
         <|> try (string "\\\\" $> '\\')
         <|> try (string "\\/" $> '/')
         <|> try (string "\\b" $> '\b')
@@ -57,8 +57,7 @@ quotedVariableChar =
         <|> try (string "\\U" *> unicode 8)
 
 blobString :: Parser String
-blobString =
-    char '`' *> many blobChar <* char '`'
+blobString = char '`' *> many blobChar <* char '`'
 
 blobChar :: Parser Char
 blobChar =
