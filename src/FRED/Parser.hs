@@ -4,8 +4,8 @@ Module      :  Fred.Parser
 This module has the generic parsers for Fred
 -}
 module Fred.Parser
-    ( document
-    )
+  ( document
+  )
 where
 
 import           Text.Parsec
@@ -30,35 +30,30 @@ import           Fred.Parser.Number             ( number )
 
 document :: Parser FredValue
 document = do
-    skipMany comment
-    doc <- stream <|> value
-    skipMany comment
-    eof
-    return doc
-  where
-    stream :: Parser FredValue
-    stream =
-        Stream
-            <$> (string "#." *> ws *> value `sepBy` (ws *> string "#." <* ws))
+  skipMany comment
+  doc <- value
+  skipMany comment
+  eof
+  return doc
 
 comment :: Parser FredAtom
 comment = char ';' *> manyTill anyChar newline $> NULL
 
 value :: Parser FredValue
-value = tagged <|> (NonTag <$> atom)
+value = (NonTag <$> atom) <|> tagged
 
 atom :: Parser FredAtom
 atom =
-    object
-        <|> array
-        <|> dateOrDateTime
-        <|> localTime
-        <|> symbol
-        <|> number
-        <|> blob
-        <|> fredString
-        <|> bool
-        <|> Fred.Parser.null
+  object
+    <|> array
+    <|> dateOrDateTime
+    <|> localTime
+    <|> symbol
+    <|> number
+    <|> blob
+    <|> fredString
+    <|> bool
+    <|> Fred.Parser.null
 
 
 tagged :: Parser FredValue
@@ -66,29 +61,33 @@ tagged = tag <|> voidTag
 
 tag :: Parser FredValue
 tag = Tag <$> try tag'
-  where
-    tag' = do
-        tagValue <- name
-        ws
-        metaValue <- option [] meta
-        ws
-        value <- value
-        return (tagValue, metaValue, value)
+ where
+  tag' = do
+    tagValue <- name 
+    ws 
+    metaValue <-option [] (try meta) 
+    ws 
+    value <- value
+    return (tagValue, metaValue, value)
 
 voidTag :: Parser FredValue
 voidTag = Tag <$> voidTag'
-  where
-    voidTag' = do
-        char '('
-        ws
-        tagValue <- name
-        ws
-        metaValue <- manyMetaItem
-        char ')'
-        return (tagValue, metaValue, NonTag NULL)
+ where
+  voidTag' = do
+    char '('
+    ws
+    tagValue <- name
+    ws
+    metaValue <- manyMetaItem
+    char ')'
+    return (tagValue, metaValue, NonTag NULL)
 
 meta :: Parser [(String, FredAtom)]
-meta = char '(' *> ws *> manyMetaItem <* char ')'
+meta =
+   char '('
+    *> ws
+    *> manyMetaItem
+    <* char ')'
 
 manyMetaItem :: Parser [(String, FredAtom)]
 manyMetaItem = metaItem `sepEndBy` ws1
@@ -98,27 +97,36 @@ metaItem = meta'
 
 meta' :: Parser (String, FredAtom)
 meta' = do
-    key <- name
-    ws
-    char '='
-    ws
-    value <- atom
-    return (key, value)
+  key <- name
+  ws
+  char '='
+  ws
+  value <- atom
+  return (key, value)
 
 null :: Parser FredAtom
-null = string "null" $> NULL
+null = try (string "null") $> NULL
 
 array :: Parser FredAtom
-array = A <$> (char '[' *> ws *> value `sepEndBy` ws1 <* char ']')
+array =
+  A
+    <$> (   (char '[' *> ws *> value `sepEndBy` ws1 <* char ']')
+        <|> (       try
+            $       string "#."
+            *>      ws
+            *>      value
+            `sepBy` (ws *> string "#." <* ws)
+            )
+        )
 
 object :: Parser FredAtom
 object = O <$> (char '{' *> ws *> pair `sepEndBy` ws1 <* char '}')
 
 pair :: Parser (String, FredValue)
 pair = do
-    key <- name
-    ws
-    char ':'
-    ws
-    value <- value
-    return (key, value)
+  key <- name
+  ws
+  char ':'
+  ws
+  value <- value
+  return (key, value)

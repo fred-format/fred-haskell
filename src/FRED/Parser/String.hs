@@ -24,7 +24,7 @@ symbol :: Parser FredAtom
 symbol = Symbol <$> (char '$' *> name)
 
 blob :: Parser FredAtom
-blob = Blob . BC.pack <$> (char '#' *> blobString)
+blob = Blob . BC.pack <$> blobString
 
 name :: Parser String
 name = variable <|> quotedVariable
@@ -33,19 +33,19 @@ variable :: Parser String
 variable = (:) <$> variableChar <*> many variableCharWithDigits
 
 variableChar :: Parser Char
-variableChar = noneOf ("#\"`$:;{}[]=()\t\r\n ," ++ ['0' .. '9'])
+variableChar = noneOf ("\"`$:;{}[]=()\t\r\n ," ++ ['0' .. '9'])
 
 variableCharWithDigits :: Parser Char
-variableCharWithDigits = noneOf "#\"`$:;{}[]=()\t\r\n ,"
+variableCharWithDigits = noneOf "\"`$:;{}[]=()\t\r\n ,"
 
 quotedVariable :: Parser String
-quotedVariable = char '`' *> many quotedVariableChar <* char '`'
+quotedVariable = char '\"' *> many quotedVariableChar <* char '\"'
 
 quotedVariableChar :: Parser Char
 quotedVariableChar =
-    noneOf "`\\"
+    noneOf "\"\\"
         <|> try (string "\\n" $> '\n')
-        <|> try (string "\\`" $> '`')
+        <|> try (string "\"" $> '\"')
         <|> try (string "\\\\" $> '\\')
         <|> try (string "\\/" $> '/')
         <|> try (string "\\b" $> '\b')
@@ -57,13 +57,14 @@ quotedVariableChar =
         <|> try (string "\\U" *> unicode 8)
 
 blobString :: Parser String
-blobString = char '"' *> many blobChar <* char '"'
+blobString =
+    char '`' *> many blobChar <* char '`'
 
 blobChar :: Parser Char
 blobChar =
-    noneOf "\"\\\\u\\U"
+    noneOf ['`', '\\']
         <|> try (string "\\n" $> '\n')
-        <|> try (string "\\\"" $> '\"')
+        <|> try (string "\\`" $> '`')
         <|> try (string "\\\\" $> '\\')
         <|> try (string "\\/" $> '/')
         <|> try (string "\\b" $> '\b')

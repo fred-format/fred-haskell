@@ -17,15 +17,15 @@ import qualified Data.ByteString.Char8         as BC
 
 
 data FredValue =
-    Stream [FredValue] | Tag (String, [(String, FredAtom)], FredValue) | NonTag FredAtom
-    deriving Show
+    Tag (String, [(String, FredAtom)], FredValue) | NonTag FredAtom
+    deriving (Show, Eq)
 
 data FredAtom =
     B Bool
     | S String
     | A [FredValue]
     | O [(String, FredValue)]
-    | N (Either Integer Float)
+    | N (Either Integer Double)
     | Symbol String
     | Blob B.ByteString
     | LDate Day
@@ -33,4 +33,8 @@ data FredAtom =
     | LDateTime LocalTime -- LocalTime Day TimeOfDay
     | DateTime ZonedTime -- ZonedTime LocalTime TimeZone
     | NULL
-    deriving Show
+    deriving (Show, Eq)
+
+instance (Eq ZonedTime) where
+    (==) x y = zonedTimeToLocalTime x == zonedTimeToLocalTime y
+    (/=) x y = zonedTimeToLocalTime x /= zonedTimeToLocalTime y
