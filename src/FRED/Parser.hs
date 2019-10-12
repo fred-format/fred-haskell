@@ -30,9 +30,9 @@ import           Fred.Parser.Number             ( number )
 
 document :: Parser FredValue
 document = do
-  skipMany comment
+  ws
   doc <- value
-  skipMany comment
+  ws
   eof
   return doc
 
@@ -63,10 +63,10 @@ tag :: Parser FredValue
 tag = Tag <$> try tag'
  where
   tag' = do
-    tagValue <- name 
-    ws 
-    metaValue <-option [] (try meta) 
-    ws 
+    tagValue <- name
+    ws
+    metaValue <- option [] (try meta)
+    ws
     value <- value
     return (tagValue, metaValue, value)
 
@@ -83,11 +83,7 @@ voidTag = Tag <$> voidTag'
     return (tagValue, metaValue, NonTag NULL)
 
 meta :: Parser [(String, FredAtom)]
-meta =
-   char '('
-    *> ws
-    *> manyMetaItem
-    <* char ')'
+meta = char '(' *> ws *> manyMetaItem <* char ')'
 
 manyMetaItem :: Parser [(String, FredAtom)]
 manyMetaItem = metaItem `sepEndBy` ws1
@@ -111,12 +107,7 @@ array :: Parser FredAtom
 array =
   A
     <$> (   (char '[' *> ws *> value `sepEndBy` ws1 <* char ']')
-        <|> (       try
-            $       string "#."
-            *>      ws
-            *>      value
-            `sepBy` (ws *> string "#." <* ws)
-            )
+        <|> many1 ((try $ string "#.") *> ws *> value <* ws)
         )
 
 object :: Parser FredAtom
