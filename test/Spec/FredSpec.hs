@@ -25,8 +25,6 @@ import           Fred.Value                     ( FredValue(..)
                                                 , FredAtom(..)
                                                 )
 instance ToJSON FredValue where
-    toJSON (Stream fredValue) = toJSON fredValue
-
     toJSON (Tag (tag, [], atom)) =
         object ["tag" .= tag, "meta" .= Null, "value" .= toJSON atom]
 
@@ -71,12 +69,10 @@ instance ToJSON FredAtom where
 toPair :: ToJSON a => (String, a) -> (T.Text, Value)
 toPair (name, value) = (T.pack name, toJSON value)
 
-
 spec :: Spec
 spec = do
     describe "Valid fred documents"   validTests
     describe "Invalid fred documents" invalidTests
-
 
 validTests :: Spec
 validTests = do
